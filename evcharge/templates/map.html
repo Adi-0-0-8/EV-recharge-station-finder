@@ -1,0 +1,119 @@
+{% extends 'base.html' %} {% block title%} Map {%endblock%}
+
+<style></style>
+
+{% block content%}
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <a class="navbar-brand" id="brand" href="login" style="margin-right: 45em"><b>EV-charge</b></a>
+  <a class="btn text-black" href="/add">addpoints</a>
+  <input
+    type="text"
+    list="Station"
+    placeholder="use suggestion to get value"
+    id="searchitem"
+    style="
+      background-color: #fff;
+      border: none;
+      padding: 10px 15px;
+      font-size: 16px;
+      margin: 4px 2px;
+    "
+  />
+  <datalist id="Station"> </datalist>
+
+  <button
+    onclick="stationsearch()"
+    style="
+      background-color: #4caf50;
+      border: none;
+      padding: 10px 15px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 4px 2px;
+      cursor: pointer;
+      color: #fff;
+    "
+  >
+    search
+  </button>
+</nav>
+
+<div id="map" style="width: 100%; height: 100vh"></div>
+<a href="details">details</a>
+<script>
+  var map = L.map("map").setView([12.9716, 77.5946], 12);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution:
+      '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(map);
+
+  L.control.locate().addTo(map);
+
+  var routingControl = null;
+  var currentlat = null;
+  var currentlon = null;
+  navigator.geolocation.getCurrentPosition(function (position) {
+    currentlat = position.coords.latitude;
+    currentlon = position.coords.longitude;
+  });
+  window.onload = (event) => {
+    console.log("page is fully loaded");
+    var data = JSON.parse("{{data|escapejs}}");
+    console.log(data);
+    for (let j = 0; j < data.length; j++) {
+      var datalist = document.getElementById("Station");
+      var opt = document.createElement("option");
+      opt.value = `${data[j].latitude} , ${data[j].longitude}`;
+      opt.innerHTML = data[j].name;
+      datalist.appendChild(opt);
+
+      // console.log(data[i]);
+      coords = [[data[j].latitude, data[j].longitude]];
+      price = [data[j].chargeprice.toString()];
+
+      let l = coords.length;
+      for (let i = 0; i < l; i++) {
+        var pop = L.popup({
+          closeOnclick: true,
+        }).setContent(
+          data[j].name +
+            `<br><button class = "btn btn-primary"  style="color:#fff; width:10em; margin-top:0.5em"        
+          onclick=direction(${[
+            data[j].latitude,
+            data[j].longitude,
+          ]})>Directions</button>` +
+            `<br><a class="btn btn-success" style="color:#fff; width:10em; margin-top:0.5em;" href="details/${data[j].name}">Details</a>`
+        );
+        var marker = L.marker(coords[i]).addTo(map).bindPopup(pop);
+        var toollip = L.tooltip({
+          permanent: true,
+        }).setContent("Rs " + price[i] + "/unit");
+
+        marker.bindTooltip(toollip);
+      }
+    }
+  };
+
+  function direction(lat, lon) {
+    if (routingControl != null) {
+      map.removeControl(routingControl);
+      routingControl = null;
+    }
+    console.log(map);
+
+    console.log(currentlon);
+    routingControl = L.Routing.control({
+      waypoints: [L.latLng(lat, lon), L.latLng(currentlat, currentlon)],
+    }).addTo(map);
+  }
+
+  function stationsearch() {
+    var items = document.getElementById("searchitem").value.split(",");
+    map.setView(items, 15);
+  }
+</script>
+{% endblock %}
